@@ -1,3 +1,6 @@
+/**
+ * writes data to a device address
+ */
 void writeTo(byte device, byte address, byte value)   // simplifies writing to registers
 {
     Wire.beginTransmission(device);
@@ -6,6 +9,10 @@ void writeTo(byte device, byte address, byte value)   // simplifies writing to r
     Wire.endTransmission(true);
 }
 
+
+/**
+ * makes a beep sound
+ */
 void beep()
 {
     digitalWrite(BUZZER, HIGH);
@@ -14,6 +21,10 @@ void beep()
     delay(80);
 }
 
+
+/**
+ * saves offset values to memory and determines calibrating
+ */
 void save()
 {
     EEPROM.put(0, offsets);
@@ -25,17 +36,21 @@ void save()
     beep();
 }
 
-void angle_setup()    //sets internal oscillator, scaling and ......
+
+/**
+ * sets internal oscillator, scaling and ....?
+ */
+void angle_setup()
 {
     Wire.begin();
     delay(100);
     writeTo(MPU6050, PWR_MGMT_1, 0);              // specify internal 8MHz occilator?
-    writeTo(MPU6050, ACCEL_CONFIG, accSens << 3); // Specifying output scaling of accelerometer
-    writeTo(MPU6050, GYRO_CONFIG, gyroSens << 3); // Specifying output scaling of gyroscope
+    writeTo(MPU6050, ACCEL_CONFIG, accSens << 3); // Specify output scaling of accelerometer
+    writeTo(MPU6050, GYRO_CONFIG, gyroSens << 3); // Specify output scaling of gyroscope
     delay(100);
 
-    for (int i = 0; i < 1024; i++)
-    {
+    int32_t GyZ_offset_sum = 0;
+    for (int i = 0; i < 1024; i++) {
         angle_calc();
         // Serial.println(GyZ);
         GyZ_offset_sum += GyZ;
@@ -46,8 +61,8 @@ void angle_setup()    //sets internal oscillator, scaling and ......
     Serial.println(GyZ_offset);
     beep();
 
-    for (int i = 0; i < 1024; i++)
-    {
+    int32_t GyY_offset_sum = 0;
+    for (int i = 0; i < 1024; i++) {
         angle_calc();
         // Serial.println(GyY);
         GyY_offset_sum += GyY;
@@ -60,9 +75,12 @@ void angle_setup()    //sets internal oscillator, scaling and ......
     beep();
 }
 
+
+/**
+ * determines the balancing point and some other things
+ */
 void angle_calc()
 {
-
     // read raw accel/gyro measurements from device (deg/s) - check the register map pg 31
     Wire.beginTransmission(MPU6050);
     Wire.write(0x43);
@@ -72,7 +90,7 @@ void angle_calc()
     GyY = Wire.read() << 8 | Wire.read(); // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
     GyZ = Wire.read() << 8 | Wire.read(); // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
 
-  // read raw accel/gyro measurements from device - (g) check the register map pg 29
+    // read raw accel/gyro measurements from device - (g) check the register map pg 29
     Wire.beginTransmission(MPU6050);
     Wire.write(0x3B);
     Wire.endTransmission(false);
@@ -82,17 +100,18 @@ void angle_calc()
     AcZ = Wire.read() << 8 | Wire.read(); // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
 
     // adjust the readings of the gyros by subracting the manually calibrated offsets
-   // GyX -= GyX_offset;// and this
+    // GyX -= GyX_offset;// and this
     GyZ -= GyZ_offset;
     GyY -= GyY_offset;
 
     // determine discrete difference in change
     robot_angleX += GyZ * loop_time / 1000 / 65.536; //65.536 is lsb sensitivity //May have to be GyX ?????????????????? //roll :)
     robot_angleY += GyY * loop_time / 1000 / 65.536;// //pitch
-   // robot_angleZ += GyX * loop_time / 1000/ 65.536;   i added this
+    // robot_angleZ += GyX * loop_time / 1000/ 65.536;   i added this
 
 
     // deterine the angle of the robot about the x & y axis (degrees) (pitch and roll)
+    float Gyro_amount = 0.996; // determines the ratio of how much the code that adds the gyro and acc readings together to determine discrete increase in angle change (functions line 97) 
     Acc_angleX = atan2(AcY, -AcX) * 57.2958;    
     robot_angleX = robot_angleX * Gyro_amount + Acc_angleX * (1.0 - Gyro_amount); // not sure why they are adding the accelerometer angle  
     Acc_angleY = -atan2(AcZ, -AcX) * 57.2958;
@@ -101,40 +120,48 @@ void angle_calc()
     angleX = robot_angleX;  //
     angleY = robot_angleY;  //
 
-///split maybe
-/// above keep as angle_calc
-//below as is_it_balancing?
-    
+    is_it_balancing();
+}
+
+/**
+ * determines the balancing point we are closest to
+ */
+void is_it_balancing()
+{
     if (abs(angleX - offsets.X1) < 0.4 && abs(angleY - offsets.Y1) < 0.4)
     {
-        balancing_point = 1; //corner //make an enum
+        balancing_point = CORNER;
         if (!vertical)
             beep();
         vertical = true;
     }
     else if (abs(angleX - offsets.X2) < 3 && abs(angleY - offsets.Y2) < 0.6)
     {
-        balancing_point = 2;//edge back 1
+        balancing_point = EDGE_BACK_R;
         if (!vertical)
             beep();
         vertical = true;
     }
     else if (abs(angleX - offsets.X3) < 6 && abs(angleY - offsets.Y3) < 0.6) /// maybe change from 6?
     {
-        balancing_point = 3;//edge back 2
+        balancing_point = EDGE_BACK_L;
         if (!vertical)
             beep();
         vertical = true;
     }
     else if (abs(angleX - offsets.X4) < 0.6 && abs(angleY - offsets.Y4) < 3)
     {
-        balancing_point = 4; //edge front
+        balancing_point = EDGE_FRONT;
         if (!vertical)
             beep();
         vertical = true;
     }
 }
 
+
+/**
+ * balances on CORNER
+ */
 void XY_to_threeWay(float pwm_X, float pwm_Y)
 {
 
@@ -151,6 +178,10 @@ void XY_to_threeWay(float pwm_X, float pwm_Y)
     Motor3_control(m3);
 }
 
+
+/**
+ * ?
+ */
 void battVoltage(double voltage)
 {
     // Serial.print("batt: "); Serial.println(voltage); //debug
@@ -170,6 +201,7 @@ void Motor1_control(int sp) // control motor speed and direction
         digitalWrite(DIR_1, LOW);
     else
         digitalWrite(DIR_1, HIGH);
+
     analogWrite(PWM_1, 255 - abs(sp));
 }
 
@@ -179,6 +211,7 @@ void Motor2_control(int sp)
         digitalWrite(DIR_2, LOW);
     else
         digitalWrite(DIR_2, HIGH);
+
     analogWrite(PWM_2, 255 - abs(sp));
 }
 
@@ -188,10 +221,15 @@ void Motor3_control(int sp)
         digitalWrite(DIR_3, LOW);
     else
         digitalWrite(DIR_3, HIGH);
+
     analogWrite(PWM_3, 255 - abs(sp));
 }
 
-int Tuning()
+
+/**
+ * allows tuning the PID coefficients over cable or bluetooth
+ */
+int tuning()
 {
     if (!Serial.available())
         return 0;
@@ -285,6 +323,7 @@ int Tuning()
         break;
     }
 }
+
 
 void printValues()
 {
