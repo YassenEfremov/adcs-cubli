@@ -6,22 +6,23 @@ void setup()
 {
     Serial.begin(115200);
 
+    // timers - to be determined exactly how it works
     TCCR1A = 0b00000001;
     TCCR1B = 0b00001010;
     TCCR2B = 0b00000010;
     TCCR2A = 0b00000011;
 
-    pinMode(DIR_1, OUTPUT);
+    pinMode(DIR_1, OUTPUT);   //sets motor diretion outputs and other digital pins
     pinMode(DIR_2, OUTPUT);
     pinMode(DIR_3, OUTPUT);
     pinMode(BRAKE, OUTPUT);
     pinMode(BUZZER, OUTPUT);
 
-    Motor1_control(0);
+    Motor1_control(0);        // motors turn on and keeps high
     Motor2_control(0);
     Motor3_control(0);
 
-    EEPROM.get(0, offsets);
+    EEPROM.get(0, offsets);   //read the offsets from the EEPROM - offset definition found in arduino_cube.h
     if (offsets.ID1 == 99 && offsets.ID2 == 99 && offsets.ID3 == 99 && offsets.ID4 == 99)
         calibrated = true;
     else
@@ -76,10 +77,10 @@ void loop()
             gyroZ = GyZ / 131.0; // Convert to deg/s
             gyroY = GyY / 131.0; // Convert to deg/s
 
-            gyroYfilt = alpha * gyroY + (1 - alpha) * gyroYfilt;
+            gyroYfilt = alpha * gyroY + (1 - alpha) * gyroYfilt; // no clue
             gyroZfilt = alpha * gyroZ + (1 - alpha) * gyroZfilt;
 
-            int pwm_X = constrain(pGain * angleX + iGain * gyroZfilt + sGain * motor_speed_pwmX, -255, 255); // LQR
+            int pwm_X = constrain(pGain * angleX + iGain * gyroZfilt + sGain * motor_speed_pwmX, -255, 255); // Linear quadratic reguator - to read up on :)
             int pwm_Y = constrain(pGain * angleY + iGain * gyroYfilt + sGain * motor_speed_pwmY, -255, 255); // LQR
             motor_speed_pwmX += pwm_X;
             motor_speed_pwmY += pwm_Y;
@@ -88,15 +89,15 @@ void loop()
             {
                 XY_to_threeWay(-pwm_X, -pwm_Y);
             }
-            else if (balancing_point == 2)
+            else if (balancing_point == 2)//edge back 1
             {
                 Motor1_control(-pwm_Y);
             }
-            else if (balancing_point == 3)
+            else if (balancing_point == 3)//edge back 2
             {
                 Motor2_control(pwm_Y);
             }
-            else if (balancing_point == 4)
+            else if (balancing_point == 4)//edge front
             {
                 Motor3_control(-pwm_X);
             }

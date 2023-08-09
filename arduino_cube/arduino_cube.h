@@ -21,7 +21,7 @@
 #define accSens 0  // 0 = 2g, 1 = 4g, 2 = 8g, 3 = 16g
 #define gyroSens 1 // 0 = 250rad/s, 1 = 500rad/s, 2 1000rad/s, 3 = 2000rad/s
 
-float Gyro_amount = 0.996;
+float Gyro_amount = 0.996; // determines the ratio of how much the code that adds the gyro and acc readings together to determine discrete increase in angle change (functions line 97) 
 
 bool vertical = false;
 bool calibrating = false;
@@ -32,9 +32,10 @@ int balancing_point = 0;
 float pGain = 150;
 float iGain = 14.00;
 float sGain = 0.035;
-int loop_time = 10;
 
-struct OffsetsObj
+int loop_time = 10;           //sampling rate of sensors in miliseconds - set by register 25 
+
+struct OffsetsObj // offsets of gyros while balancing
 {
     int ID1;
     float X1;
@@ -56,10 +57,14 @@ float alpha = 0.6;
 
 int16_t AcX, AcY, AcZ, GyY, GyZ, gyroX, gyroY, gyroZ, gyroYfilt, gyroZfilt;
 
+//the user calibrated gyroscope offsets 
+int16_t GyX_offset = 0;
 int16_t GyZ_offset = 0;
 int16_t GyY_offset = 0;
+//
 int32_t GyZ_offset_sum = 0;
 int32_t GyY_offset_sum = 0;
+int32_t GyX_offset_sum = 0;
 
 float robot_angleX, robot_angleY, angleX, angleY;
 float Acc_angleX, Acc_angleY;

@@ -1,4 +1,4 @@
-void writeTo(byte device, byte address, byte value)
+void writeTo(byte device, byte address, byte value)   // simplifies writing to registers
 {
     Wire.beginTransmission(device);
     Wire.write(address);
@@ -25,11 +25,11 @@ void save()
     beep();
 }
 
-void angle_setup()
+void angle_setup()    //sets internal oscillator, scaling and ......
 {
     Wire.begin();
     delay(100);
-    writeTo(MPU6050, PWR_MGMT_1, 0);
+    writeTo(MPU6050, PWR_MGMT_1, 0);              // specify internal 8MHz occilator?
     writeTo(MPU6050, ACCEL_CONFIG, accSens << 3); // Specifying output scaling of accelerometer
     writeTo(MPU6050, GYRO_CONFIG, gyroSens << 3); // Specifying output scaling of gyroscope
     delay(100);
@@ -63,14 +63,16 @@ void angle_setup()
 void angle_calc()
 {
 
-    // read raw accel/gyro measurements from device
+    // read raw accel/gyro measurements from device (deg/s) - check the register map pg 31
     Wire.beginTransmission(MPU6050);
-    Wire.write(0x45);
+    Wire.write(0x43);
     Wire.endTransmission(false);
     Wire.requestFrom(MPU6050, 6, true);
+    //GyX = Wire.read() << 8 | Wire.read(); // 0x43 (GYRO_XOUT_H) bitwise-or 0x44 (GYRO_XOUT_L)
     GyY = Wire.read() << 8 | Wire.read(); // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
     GyZ = Wire.read() << 8 | Wire.read(); // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
 
+  // read raw accel/gyro measurements from device - (g) check the register map pg 29
     Wire.beginTransmission(MPU6050);
     Wire.write(0x3B);
     Wire.endTransmission(false);
@@ -79,44 +81,54 @@ void angle_calc()
     AcY = Wire.read() << 8 | Wire.read(); // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
     AcZ = Wire.read() << 8 | Wire.read(); // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
 
+    // adjust the readings of the gyros by subracting the manually calibrated offsets
+   // GyX -= GyX_offset;// and this
     GyZ -= GyZ_offset;
     GyY -= GyY_offset;
 
-    robot_angleX += GyZ * loop_time / 1000 / 65.536;
-    Acc_angleX = atan2(AcY, -AcX) * 57.2958;
-    robot_angleX = robot_angleX * Gyro_amount + Acc_angleX * (1.0 - Gyro_amount);
+    // determine discrete difference in change
+    robot_angleX += GyZ * loop_time / 1000 / 65.536; //65.536 is lsb sensitivity //May have to be GyX ?????????????????? //roll :)
+    robot_angleY += GyY * loop_time / 1000 / 65.536;// //pitch
+   // robot_angleZ += GyX * loop_time / 1000/ 65.536;   i added this
 
-    robot_angleY += GyY * loop_time / 1000 / 65.536;
+
+    // deterine the angle of the robot about the x & y axis (degrees) (pitch and roll)
+    Acc_angleX = atan2(AcY, -AcX) * 57.2958;    
+    robot_angleX = robot_angleX * Gyro_amount + Acc_angleX * (1.0 - Gyro_amount); // not sure why they are adding the accelerometer angle  
     Acc_angleY = -atan2(AcZ, -AcX) * 57.2958;
     robot_angleY = robot_angleY * Gyro_amount + Acc_angleY * (1.0 - Gyro_amount);
 
-    angleX = robot_angleX;
-    angleY = robot_angleY;
+    angleX = robot_angleX;  //
+    angleY = robot_angleY;  //
 
+///split maybe
+/// above keep as angle_calc
+//below as is_it_balancing?
+    
     if (abs(angleX - offsets.X1) < 0.4 && abs(angleY - offsets.Y1) < 0.4)
     {
-        balancing_point = 1;
+        balancing_point = 1; //corner //make an enum
         if (!vertical)
             beep();
         vertical = true;
     }
     else if (abs(angleX - offsets.X2) < 3 && abs(angleY - offsets.Y2) < 0.6)
     {
-        balancing_point = 2;
+        balancing_point = 2;//edge back 1
         if (!vertical)
             beep();
         vertical = true;
     }
-    else if (abs(angleX - offsets.X3) < 6 && abs(angleY - offsets.Y3) < 0.6)
+    else if (abs(angleX - offsets.X3) < 6 && abs(angleY - offsets.Y3) < 0.6) /// maybe change from 6?
     {
-        balancing_point = 3;
+        balancing_point = 3;//edge back 2
         if (!vertical)
             beep();
         vertical = true;
     }
     else if (abs(angleX - offsets.X4) < 0.6 && abs(angleY - offsets.Y4) < 3)
     {
-        balancing_point = 4;
+        balancing_point = 4; //edge front
         if (!vertical)
             beep();
         vertical = true;
@@ -152,7 +164,7 @@ void battVoltage(double voltage)
     }
 }
 
-void Motor1_control(int sp)
+void Motor1_control(int sp) // control motor speed and direction
 {
     if (sp > 0)
         digitalWrite(DIR_1, LOW);
