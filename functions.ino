@@ -49,76 +49,74 @@ void angle_setup()
     writeTo(MPU6050, GYRO_CONFIG, gyroSens << 3); // Specify output scaling of gyroscope
     delay(100);
 
-    int32_t GyZ_offset_sum = 0;
+    int32_t gyro_Z_offset_sum = 0;
     for (int i = 0; i < 1024; i++) {
         angle_calc();
-        // Serial.println(GyZ);
-        GyZ_offset_sum += GyZ;
+        // Serial.println(gyro_raw.z);
+        gyro_Z_offset_sum += gyro_raw.z;
         delay(3);
     }
-    GyZ_offset = GyZ_offset_sum >> 10;
+    calibrated_offset.z = gyro_Z_offset_sum >> 10;  // average z offset
     Serial.print("GyZ offset value = ");
-    Serial.println(GyZ_offset);
+    Serial.println(calibrated_offset.z);
     beep();
 
-    int32_t GyY_offset_sum = 0;
+    int32_t gyro_Y_offset_sum = 0;
     for (int i = 0; i < 1024; i++) {
         angle_calc();
-        // Serial.println(GyY);
-        GyY_offset_sum += GyY;
+        // Serial.println(gyro_raw.y);
+        gyro_Y_offset_sum += gyro_raw.y;
         delay(3);
     }
-    GyY_offset = GyY_offset_sum >> 10;
+    calibrated_offset.y = gyro_Y_offset_sum >> 10;  // average y offset
     Serial.print("GyY offset value = ");
-    Serial.println(GyY_offset);
+    Serial.println(calibrated_offset.y);
     beep();
     beep();
 }
 
 
 /**
- * determines the balancing point and some other things
+ * determines our x and y rotation
  */
 void angle_calc()
 {
-    // read raw accel/gyro measurements from device (deg/s) - check the register map pg 31
+    // read raw gyro measurements from device (deg/s) - check the register map pg 31
     Wire.beginTransmission(MPU6050);
     Wire.write(0x43);
     Wire.endTransmission(false);
     Wire.requestFrom(MPU6050, 6, true);
     //GyX = Wire.read() << 8 | Wire.read(); // 0x43 (GYRO_XOUT_H) bitwise-or 0x44 (GYRO_XOUT_L)
-    GyY = Wire.read() << 8 | Wire.read(); // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-    GyZ = Wire.read() << 8 | Wire.read(); // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+    gyro_raw.y = Wire.read() << 8 | Wire.read(); // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+    gyro_raw.z = Wire.read() << 8 | Wire.read(); // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
 
-    // read raw accel/gyro measurements from device - (g) check the register map pg 29
+    // read raw accel measurements from device - (g) check the register map pg 29
     Wire.beginTransmission(MPU6050);
     Wire.write(0x3B);
     Wire.endTransmission(false);
     Wire.requestFrom(MPU6050, 6, true);
-    AcX = Wire.read() << 8 | Wire.read(); // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-    AcY = Wire.read() << 8 | Wire.read(); // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-    AcZ = Wire.read() << 8 | Wire.read(); // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+    accel_raw.x = Wire.read() << 8 | Wire.read(); // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+    accel_raw.y = Wire.read() << 8 | Wire.read(); // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+    accel_raw.z = Wire.read() << 8 | Wire.read(); // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
 
     // adjust the readings of the gyros by subracting the manually calibrated offsets
-    // GyX -= GyX_offset;// and this
-    GyZ -= GyZ_offset;
-    GyY -= GyY_offset;
+    gyro_raw.z -= calibrated_offset.z;
+    gyro_raw.y -= calibrated_offset.y;
 
     // determine discrete difference in change
-    robot_angleX += GyZ * loop_time / 1000 / 65.536; //65.536 is lsb sensitivity //May have to be GyX ?????????????????? //roll :)
-    robot_angleY += GyY * loop_time / 1000 / 65.536;// //pitch
-    // robot_angleZ += GyX * loop_time / 1000/ 65.536;   i added this
+    robot_angle.x += gyro_raw.z * loop_time / 1000 / 65.536; //65.536 is lsb sensitivity //May have to be GyX ?????????????????? //roll :)
+    robot_angle.y += gyro_raw.y * loop_time / 1000 / 65.536;// //pitch
 
 
-    // deterine the angle of the robot about the x & y axis (degrees) (pitch and roll)
-    float Gyro_amount = 0.996; // determines the ratio of how much the code that adds the gyro and acc readings together to determine discrete increase in angle change (functions line 97) 
-    Acc_angleX = atan2(AcY, -AcX) * 57.2958;    
-    robot_angleX = robot_angleX * Gyro_amount + Acc_angleX * (1.0 - Gyro_amount); // not sure why they are adding the accelerometer angle  
-    Acc_angleY = -atan2(AcZ, -AcX) * 57.2958;
-    robot_angleY = robot_angleY * Gyro_amount + Acc_angleY * (1.0 - Gyro_amount);
+    // determine the angle of the robot about the x & y axis (degrees) (pitch and roll)
+    float gyro_amount = 0.996; // determines the ratio of how much the code that adds the gyro and acc readings together to determine discrete increase in angle change (functions line 97) 
+    float acc_angleX = atan2(accel_raw.y, -accel_raw.x) * 57.2958;    
+    robot_angle.x = robot_angle.x * gyro_amount + acc_angleX * (1.0 - gyro_amount); // not sure why they are adding the accelerometer angle  
+    float acc_angleY = -atan2(accel_raw.z, -accel_raw.x) * 57.2958;
+    robot_angle.y = robot_angle.y * gyro_amount + acc_angleY * (1.0 - gyro_amount);
 
-    angleX = robot_angleX;  //
-    angleY = robot_angleY;  //
+    rotation.x = robot_angle.x;
+    rotation.y = robot_angle.y;
 
     is_it_balancing();
 }
@@ -128,28 +126,28 @@ void angle_calc()
  */
 void is_it_balancing()
 {
-    if (abs(angleX - offsets.X1) < 0.4 && abs(angleY - offsets.Y1) < 0.4)
+    if (abs(rotation.x - offsets.X1) < 0.4 && abs(rotation.y - offsets.Y1) < 0.4)
     {
         balancing_point = CORNER;
         if (!vertical)
             beep();
         vertical = true;
     }
-    else if (abs(angleX - offsets.X2) < 3 && abs(angleY - offsets.Y2) < 0.6)
+    else if (abs(rotation.x - offsets.X2) < 3 && abs(rotation.y - offsets.Y2) < 0.6)
     {
         balancing_point = EDGE_BACK_R;
         if (!vertical)
             beep();
         vertical = true;
     }
-    else if (abs(angleX - offsets.X3) < 6 && abs(angleY - offsets.Y3) < 0.6) /// maybe change from 6?
+    else if (abs(rotation.x - offsets.X3) < 6 && abs(rotation.y - offsets.Y3) < 0.6) /// maybe change from 6?
     {
         balancing_point = EDGE_BACK_L;
         if (!vertical)
             beep();
         vertical = true;
     }
-    else if (abs(angleX - offsets.X4) < 0.6 && abs(angleY - offsets.Y4) < 3)
+    else if (abs(rotation.x - offsets.X4) < 0.6 && abs(rotation.y - offsets.Y4) < 3)
     {
         balancing_point = EDGE_FRONT;
         if (!vertical)
@@ -164,7 +162,6 @@ void is_it_balancing()
  */
 void XY_to_threeWay(float pwm_X, float pwm_Y)
 {
-
     int16_t m1 = round(0.5 * pwm_X - 0.75 * pwm_Y);
     int16_t m2 = round(0.5 * pwm_X + 0.75 * pwm_Y);
     int16_t m3 = pwm_X;
@@ -180,7 +177,7 @@ void XY_to_threeWay(float pwm_X, float pwm_Y)
 
 
 /**
- * ?
+ * battery status
  */
 void battVoltage(double voltage)
 {
@@ -195,7 +192,11 @@ void battVoltage(double voltage)
     }
 }
 
-void Motor1_control(int sp) // control motor speed and direction
+
+/**
+ * controls motor 1 speed and direction
+ */
+void Motor1_control(int sp)
 {
     if (sp > 0)
         digitalWrite(DIR_1, LOW);
@@ -205,6 +206,10 @@ void Motor1_control(int sp) // control motor speed and direction
     analogWrite(PWM_1, 255 - abs(sp));
 }
 
+
+/**
+ * controls motor 2 speed and direction
+ */
 void Motor2_control(int sp)
 {
     if (sp > 0)
@@ -215,6 +220,10 @@ void Motor2_control(int sp)
     analogWrite(PWM_2, 255 - abs(sp));
 }
 
+
+/**
+ * controls motor 3 speed and direction
+ */
 void Motor3_control(int sp)
 {
     if (sp > 0)
@@ -229,7 +238,7 @@ void Motor3_control(int sp)
 /**
  * allows tuning the PID coefficients over cable or bluetooth
  */
-int tuning()
+int tune()
 {
     if (!Serial.available())
         return 0;
@@ -239,8 +248,8 @@ int tuning()
         return 0;
     char cmd = Serial.read(); // get command byte
     Serial.flush();
-    switch (param)
-    {
+
+    switch (param) {
     case 'p':
         if (cmd == '+')
             pGain += 1;
@@ -264,9 +273,9 @@ int tuning()
         break;
     case 'b':
         if (cmd == '+')
-            bat_divider += 1;
+            battery_divider += 1;
         if (cmd == '-')
-            bat_divider -= 1;
+            battery_divider -= 1;
         printValues();
         break;
     case 'c':
@@ -278,38 +287,38 @@ int tuning()
         if (cmd == '-' && calibrating)
         {
             Serial.print("X: ");
-            Serial.print(robot_angleX);
+            Serial.print(robot_angle.x);
             Serial.print(" Y: ");
-            Serial.println(robot_angleY);
-            if (abs(robot_angleX) < 10 && abs(robot_angleY) < 10)
+            Serial.println(robot_angle.y);
+            if (abs(robot_angle.x) < 10 && abs(robot_angle.y) < 10)
             {
                 offsets.ID1 = 99;
-                offsets.X1 = robot_angleX;
-                offsets.Y1 = robot_angleY;
+                offsets.X1 = robot_angle.x;
+                offsets.Y1 = robot_angle.y;
                 Serial.println("Vertex OK.");
                 save();
             }
-            else if (robot_angleX > -45 && robot_angleX < -25 && robot_angleY > -30 && robot_angleY < -10)
+            else if (robot_angle.x > -45 && robot_angle.x < -25 && robot_angle.y > -30 && robot_angle.y < -10)
             {
                 offsets.ID2 = 99;
-                offsets.X2 = robot_angleX;
-                offsets.Y2 = robot_angleY;
+                offsets.X2 = robot_angle.x;
+                offsets.Y2 = robot_angle.y;
                 Serial.println("First edge OK.");
                 save();
             }
-            else if (robot_angleX > 20 && robot_angleX < 40 && robot_angleY > -30 && robot_angleY < -10)
+            else if (robot_angle.x > 20 && robot_angle.x < 40 && robot_angle.y > -30 && robot_angle.y < -10)
             {
                 offsets.ID3 = 99;
-                offsets.X3 = robot_angleX;
-                offsets.Y3 = robot_angleY;
+                offsets.X3 = robot_angle.x;
+                offsets.Y3 = robot_angle.y;
                 Serial.println("Second edge OK.");
                 save();
             }
-            else if (abs(robot_angleX) < 15 && robot_angleY > 30 && robot_angleY < 50)
+            else if (abs(robot_angle.x) < 15 && robot_angle.y > 30 && robot_angle.y < 50)
             {
                 offsets.ID4 = 99;
-                offsets.X4 = robot_angleX;
-                offsets.Y4 = robot_angleY;
+                offsets.X4 = robot_angle.x;
+                offsets.Y4 = robot_angle.y;
                 Serial.println("Third edge OK.");
                 save();
             }
@@ -333,6 +342,6 @@ void printValues()
     Serial.print(iGain);
     Serial.print(" S: ");
     Serial.println(sGain, 4);
-    Serial.print("Bat_divider: ");
-    Serial.println(bat_divider);
+    Serial.print("battery_divider: ");
+    Serial.println(battery_divider);
 }

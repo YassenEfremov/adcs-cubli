@@ -1,7 +1,5 @@
-// #include "arduino_cube.h"
 #include <Wire.h>
 #include <EEPROM.h>
-
 
 #define PWM_3 3
 #define DIR_3 4
@@ -17,7 +15,7 @@
 #define VBAT A7
 
 #define MPU6050 0x68        // Device address
-#define ACCEL_CONFIG 0x1C   // Accelerometer configuration address
+#define ACCEL_CONFIG 0x1C   // Accel configuration address
 #define GYRO_CONFIG 0x1B    // Gyro configuration address
 #define PWR_MGMT_1 0x6B
 #define PWR_MGMT_2 0x6C
@@ -26,10 +24,10 @@
 #define accSens 0   // 0 = 2g, 1 = 4g, 2 = 8g, 3 = 16g
 #define gyroSens 1  // 0 = 250rad/s, 1 = 500rad/s, 2 1000rad/s, 3 = 2000rad/s
 
+/*=================================================================*/
 
-// these values are in a struct because they are read consecutively from memory
-struct OffsetsObj // offsets of gyros while balancing
-{
+// offsets of gyros while balancing
+struct OffsetsObj {
     int ID1;
     float X1;
     float Y1;
@@ -50,19 +48,33 @@ struct Vec3_16 {
     int16_t z;
 };
 
-enum BalancingPoint {
-    CORNER = 1,
-    EDGE_BACK_R = 2,
-    EDGE_BACK_L = 3,
-    EDGE_FRONT = 4
+struct Vec3_32 {
+    int32_t x;
+    int32_t y;
+    int32_t z;
 };
 
+struct Vec3_f {
+    float x;
+    float y;
+    float z;
+};
+
+enum BalancingPoint {
+    NONE,
+    CORNER,
+    EDGE_BACK_R,
+    EDGE_BACK_L,
+    EDGE_FRONT
+};
+
+/*=================================================================*/
 
 bool vertical = false;
 bool calibrating = false;
 bool calibrated = false;
 
-BalancingPoint balancing_point = 0;
+BalancingPoint balancing_point = NONE;
 
 float pGain = 150;
 float iGain = 14.00;
@@ -72,22 +84,20 @@ int loop_time = 10; // sampling rate of sensors in miliseconds - set by register
 
 OffsetsObj offsets;
 
-int16_t AcX, AcY, AcZ;
-int16_t GyY, GyZ;
+Vec3_16 accel_raw;
+Vec3_16 gyro_raw;
+Vec3_16 gyro_filt;
 
 // user calibrated gyroscope offsets
-int16_t GyX_offset = 0;
-int16_t GyZ_offset = 0;
-int16_t GyY_offset = 0;
+Vec3_16 calibrated_offset{0.0, 0.0, 0.0};
 
 // int32_t GyX_offset_sum = 0;  // not used?
 
-float robot_angleX, robot_angleY, angleX, angleY;
-float Acc_angleX, Acc_angleY;
-int32_t motor_speed_pwmX;
-int32_t motor_speed_pwmY;
+Vec3_f robot_angle;
+Vec3_f rotation;
+Vec3_32 motor_speed_pwm;
 
-int bat_divider = 57;
+int battery_divider = 57;
 
 /*=================================================================*/
 
@@ -132,35 +142,35 @@ void loop()
     currentT = millis();
 
     if (currentT - previousT_1 >= loop_time) {
-        tuning(); // derinimui
+        tune(); // derinimui
         angle_calc();
 
         switch (balancing_point) {
             case CORNER:
-                angleX -= offsets.X1;
-                angleY -= offsets.Y1;
-                if (abs(angleX) > 8 || abs(angleY) > 8)
+                rotation.x -= offsets.X1;
+                rotation.y -= offsets.Y1;
+                if (abs(rotation.x) > 8 || abs(rotation.y) > 8)
                     vertical = false;
                 break;
 
             case EDGE_BACK_R:
-                angleX -= offsets.X2;
-                angleY -= offsets.Y2;
-                if (abs(angleY) > 6)
+                rotation.x -= offsets.X2;
+                rotation.y -= offsets.Y2;
+                if (abs(rotation.y) > 6)
                     vertical = false;
                 break;
 
             case EDGE_BACK_L:
-                angleX -= offsets.X3;
-                angleY -= offsets.Y3;
-                if (abs(angleY) > 6)
+                rotation.x -= offsets.X3;
+                rotation.y -= offsets.Y3;
+                if (abs(rotation.y) > 6)
                     vertical = false;
                 break;
 
             case EDGE_FRONT:
-                angleX -= offsets.X4;
-                angleY -= offsets.Y4;
-                if (abs(angleX) > 6)
+                rotation.x -= offsets.X4;
+                rotation.y -= offsets.Y4;
+                if (abs(rotation.x) > 6)
                     vertical = false;
                 break;
         }
@@ -168,18 +178,19 @@ void loop()
         if (vertical && calibrated && !calibrating) {
             digitalWrite(BRAKE, HIGH);
             //int16_t gyroX;    // not used?
-            int16_t gyroZ = GyZ / 131.0; // Convert to deg/s?
-            int16_t gyroY = GyY / 131.0; // Convert to deg/s?
+            int16_t gyroZ = gyro_raw.z / 131.0; // Convert to deg/s?
+            int16_t gyroY = gyro_raw.y / 131.0; // Convert to deg/s?
 
-            int16_t gyroYfilt, gyroZfilt;
+            // exponential smoothing of the gyro readings
             float alpha = 0.6;
-            gyroYfilt = alpha * gyroY + (1 - alpha) * gyroYfilt; // no clue
-            gyroZfilt = alpha * gyroZ + (1 - alpha) * gyroZfilt;
+            gyro_filt.y = alpha * gyroY + (1 - alpha) * gyro_filt.y;
+            gyro_filt.z = alpha * gyroZ + (1 - alpha) * gyro_filt.z;
 
-            int pwm_X = constrain(pGain * angleX + iGain * gyroZfilt + sGain * motor_speed_pwmX, -255, 255); // Linear quadratic reguator - to read up on :)
-            int pwm_Y = constrain(pGain * angleY + iGain * gyroYfilt + sGain * motor_speed_pwmY, -255, 255); // LQR
-            motor_speed_pwmX += pwm_X;
-            motor_speed_pwmY += pwm_Y;
+            // Linear quadratic reguator - to read up on :)
+            int pwm_X = constrain(pGain * rotation.x + iGain * gyro_filt.z + sGain * motor_speed_pwm.x, -255, 255);
+            int pwm_Y = constrain(pGain * rotation.y + iGain * gyro_filt.y + sGain * motor_speed_pwm.y, -255, 255);
+            motor_speed_pwm.x += pwm_X;
+            motor_speed_pwm.y += pwm_Y;
 
             // this switch tells which motors to move
             switch (balancing_point) {
@@ -200,17 +211,17 @@ void loop()
                     break;
             }
         } else {
-            balancing_point = 0;
+            balancing_point = NONE;
             XY_to_threeWay(0, 0);
             digitalWrite(BRAKE, LOW);
-            motor_speed_pwmX = 0;
-            motor_speed_pwmY = 0;
+            motor_speed_pwm.x = 0;
+            motor_speed_pwm.y = 0;
         }
         previousT_1 = currentT;
     }
 
     if (currentT - previousT_2 >= 2000) {
-        battVoltage((double)analogRead(VBAT) / bat_divider);
+        battVoltage((double)analogRead(VBAT) / battery_divider);
         if (!calibrated && !calibrating) {
             Serial.println("first you need to calibrate the balancing points...");
         }
