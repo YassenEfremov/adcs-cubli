@@ -25,28 +25,24 @@ void setup() {
   pinMode(BRAKE, OUTPUT);
   pinMode(BUZZER, OUTPUT);
  
-  Motor_control(0, 1);
-  Motor_control(0, 2);
-  Motor_control(0, 3);
+  Motor_control(0);
+  Calc_sys_param();
 
   MPU6050_init();
   MPU6050_offset_setup();
+  angle_calc();
+  
   digitalWrite(BRAKE, HIGH);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
   currentT = millis();
   if (currentT - previousT_1 >= loop_time) {
     angle_calc(); 
-    MPU6050_filter_gyros();
-    get_state_variables();
     Set_pwm();
-    Motor_control(pwm_Y,1);
+    Motor_control(-theta2dot_1);
     PrintData();
     previousT_1 = currentT;
     }
-
-    angleX = 0;
   }
 
