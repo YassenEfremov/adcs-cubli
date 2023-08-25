@@ -15,6 +15,10 @@ void setup() {
   //pinmodes
   pinMode(DIR_1, OUTPUT);     
   pinMode(PWM_1, OUTPUT);
+  pinMode(DIR_2, OUTPUT);     
+  pinMode(PWM_2, OUTPUT);
+  pinMode(DIR_3, OUTPUT);     
+  pinMode(PWM_3, OUTPUT);
   pinMode(BRAKE, OUTPUT);
   pinMode(BUZZER, OUTPUT);
 
@@ -22,9 +26,12 @@ void setup() {
   filter.begin(mgwk_freq);
 
   //Ensure the motor starts at 0 rpm
-  Motor_control(0);
+  delay(100);
+  Motor_control(1, 0);
+  Motor_control(2, 0);
+  Motor_control(3, 0);
   digitalWrite(BRAKE, HIGH);
-
+  //motor_demo();
   //Beeps to warn user that calibration is about to start
   delay(1000);
   Beep();
@@ -37,11 +44,11 @@ void setup() {
 
   //set up filter interrupt interrupt
   millis_per_filter_reading = 1000/mgwk_freq;
-  previousT_1 = millis();
-
+  
   //beep a third time to announce start
   Beep();
 
+  previousT_1 = millis();
 }
 
 void loop() {
@@ -51,11 +58,11 @@ void loop() {
   {
     angle_calc();
   }
-  //
+  //run the system actuation at correct rate
   if ((currentT - previousT_1) >= loop_time) 
   {
     Set_pwm();
-    Motor_control(-theta2dot_1);
+    Motor_set_speed();
     Tune();
     PrintData();
     previousT_1 = currentT;

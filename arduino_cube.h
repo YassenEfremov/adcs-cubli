@@ -1,7 +1,12 @@
-//pins for motor 1
-#define PWM_1         11
-#define DIR_1         10
-#define SPD_1         9
+//pins for motors
+#define PWM_1         10
+#define DIR_1         8
+
+#define PWM_2         9
+#define DIR_2         7
+
+#define PWM_3        5     
+#define DIR_3         4     
 
 // other pins
 #define BRAKE         8
@@ -30,7 +35,7 @@
 
 // Control system variables
 //##############################################################################
-float K1=   30.8;  // gains theta1 //30/
+float K1=  30.8;  // gains theta1 //30/
 float K2=  1;        // theta1dot //6
 float K3=  0.02;      // theta2   //0.15//0.05
 
@@ -51,9 +56,21 @@ float GyX_offset_sum, GyY_offset_sum, GyZ_offset_sum;
 //############################################################################
 float theta1_X = 0;       // system angular position (rad)
 float theta1dot_X= 0;    // system angular velocity
-float theta2dot_1 = 0;    // system flywheel angular velocity
-float req_torque;      // torque required by the control system
-float req_acc;          //that torque represented in acceleration
+float theta2dot_X = 0;    // system flywheel angular velocity
+
+float theta1_Y = 0;      
+float theta1dot_Y= 0;    
+float theta2dot_Y = 0;    
+
+float req_torqueX;      // torque required by the control system
+float req_accX;          //that torque represented in acceleration
+
+float req_torqueY;      
+float req_accY;         
+
+// motor control
+//############################################################################
+float m1,m2,m3;
 //general timer readings
 //############################################################################
 long currentT, previousT_1; //timer interrupts

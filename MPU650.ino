@@ -64,5 +64,7 @@ void MPU6050_filter_sensors()     //gyrofilt applies the LSB accuracy and makes 
 {    
     filter.updateIMU(GyX, GyY, GyZ, AcX, AcY, AcZ);
     theta1_X = filter.getRollRadians();
-    theta1dot_X = GyX*0.01740;  
+    theta1_Y = filter.getPitchRadians();
+    theta1dot_X = GyX*0.01740;
+    theta1dot_Y = GyY*0.01740;  
 }
