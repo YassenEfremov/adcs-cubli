@@ -96,8 +96,10 @@ void Motor_set_speed()
 }
 void Tune()
 {
-  if(Serial.available())
-  {TxRx = Serial.read();}
+  if(hc06.available()) {
+    TxRx = hc06.read();
+  }
+
   switch(TxRx)
   {
     case 'a':
@@ -125,7 +127,7 @@ void Tune()
     break;
 
   }
-TxRx = '0';
+  TxRx = '0';
 }
 
 void PrintData()
@@ -139,4 +141,23 @@ void PrintData()
   Serial.print(m2);
   Serial.print("  ");
   Serial.println(m3);
+}
+
+void process_commands() {
+  while (hc06.available() > 0) {
+    char c = hc06.read();
+    Serial.print(c);
+
+    switch (c) {
+      case '0':
+        digitalWrite(13, LOW);
+        break;
+      case '1':
+        digitalWrite(13, HIGH);
+        break;
+      default:
+        Serial.println("Unknown command!");
+        break;
+    }
+  }
 }

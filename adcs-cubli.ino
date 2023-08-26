@@ -2,11 +2,15 @@
 #include "arduino_cube.h"
 #include <stdint.h>
 #include <Wire.h>
+#include <SoftwareSerial.h>
 //dirk Slabber
 //24/08/2023
 
+SoftwareSerial hc06(2, 3);
+
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
+  hc06.begin(9600);
   //interrupt timers
   TCCR1A = 0b00000001; 
   TCCR1B = 0b00001010;
@@ -64,8 +68,24 @@ void loop() {
     Set_pwm();
     Motor_set_speed();
     Tune();
-    PrintData();
+    // PrintData();
     previousT_1 = currentT;
   }
 
+  // process_commands();
+
+  // chat v v v
+
+  // while (hc06.available() > 0) {
+  //   char c = hc06.read();
+  //   Serial.print(c);
+  // }
+  
+  // while (Serial.available() > 0) {
+  //   char c = Serial.read();
+  //   hc06.write(c);
+  //   Serial.print(c);
+  // }
+
+  // delay(10);
 }
