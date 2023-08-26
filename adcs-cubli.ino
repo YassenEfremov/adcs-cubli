@@ -72,7 +72,7 @@ void loop() {
     previousT_1 = currentT;
   }
 
-  // process_commands();
+  process_commands();
 
   // chat v v v
 
