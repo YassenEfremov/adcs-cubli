@@ -9,7 +9,7 @@
 SoftwareSerial hc06(2, 3);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   hc06.begin(9600);
   //interrupt timers
   TCCR1A = 0b00000001; 
@@ -37,13 +37,14 @@ void setup() {
   digitalWrite(BRAKE, HIGH);
   //motor_demo();
   //Beeps to warn user that calibration is about to start
-  delay(1000);
+  delay(5000);
   Beep();
-  delay(1000);
+  delay(5000);
   Beep();
 
   //initialise the IMU and complete the offset calibration
   MPU6050_init();
+  delay(100);
   MPU6050_offset_setup();
 
   //set up filter interrupt interrupt
@@ -67,12 +68,12 @@ void loop() {
   {
     Set_pwm();
     Motor_set_speed();
-    Tune();
-    // PrintData();
+    process_commands();
+    PrintData();
     previousT_1 = currentT;
   }
 
-  process_commands();
+
 
   // chat v v v
 

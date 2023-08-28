@@ -60,54 +60,61 @@ void motor_demo()
     delay(10);
   }
 }
-void Set_pwm() {
+void Set_pwm() { // assume a triangle with the motors perfectly horizontal the speeds are calculated thus
+ 
+  req_torque1 =  K1 * (theta1_X/(3*0.5) - theta1_Y/(2*0.866));
+  req_torque1 += K2 * (theta1dot_X/(3*0.5) - theta1dot_Y/(2*0.866));
+  req_torque1 += K3 * theta2dot_1; 
+  req_acc1 = ((req_torque1*((currentT - previousT_1)))/((1.877e-3)*1000));
+  theta2dot_1 = constrain((req_acc1/0.8165 + theta2dot_1),-(max_spd),max_spd);
 
-  req_torqueX =  K1 * theta1_X;
-  req_torqueX += K2 * theta1dot_X;
-  req_torqueX += K3 * theta2dot_X; 
+  req_torque2 =  K1 * (theta1_X/(3*0.5) + theta1_Y/(2*0.866));
+  req_torque2 += K2 * (theta1dot_X/(3*0.5) + theta1dot_Y/(2*0.866));
+  req_torque2 += K3 * theta2dot_2; 
+  req_acc2 = ((req_torque2*((currentT - previousT_1)))/((1.877e-3)*1000));
+  theta2dot_2 = constrain((req_acc2/0.8165 + theta2dot_2),-(max_spd),max_spd);
 
-  req_accX = ((req_torqueX*((currentT - previousT_1)))/((1.877e-3)*1000));
- if (abs(req_accX) > 0.1)
- {
-    theta2dot_X = constrain((req_accX + theta2dot_X),-(max_spd),max_spd);
- }
-
-  req_torqueY =  K1 * theta1_Y;
-  req_torqueY += K2 * theta1dot_Y;
-  req_torqueY += K3 * theta2dot_Y; 
-
-  req_accY = ((req_torqueY*((currentT - previousT_1)))/((1.877e-3)*1000));
- if (abs(req_accY) > 0.1)
- {
-    theta2dot_Y = constrain((req_accY + theta2dot_Y),-(max_spd),max_spd);
- }
-
+  req_torque3 =  K1 * (theta1_X/3);
+  req_torque3 += K2 * theta1dot_X/3;
+  req_torque3 += K3 * theta2dot_3; 
+  req_acc3 = ((req_torque3*((currentT - previousT_1)))/((1.877e-3)*1000));
+  theta2dot_3 = constrain((req_acc3/0.8165 + theta2dot_3),-(max_spd),max_spd);
 
 }
 void Motor_set_speed()
 {
-  m1 = constrain((0.6*theta2dot_X - theta2dot_Y/0.866),-max_spd,max_spd); 
-  m2 = constrain((0.6*theta2dot_X + theta2dot_Y/0.866),-max_spd,max_spd);
-  m3 = constrain(-theta2dot_X,-max_spd,max_spd);
-
-  Motor_control(1,m1);
-  Motor_control(2,m2);
-  Motor_control(3,m3);
+  Motor_control(1,theta2dot_1);
+  Motor_control(2,theta2dot_2);
+  Motor_control(3,-theta2dot_3);
 }
-void Tune()
+
+
+void PrintData()
 {
+  Serial.print(K1);
+  Serial.print("  ");
+  Serial.print(K2);
+  Serial.print("  ");
+  Serial.println(K3,4);
+}
+
+void process_commands() {
   if(hc06.available()) {
     TxRx = hc06.read();
+  }
+  if (Serial.available())
+  {
+    TxRx = Serial.read();
   }
 
   switch(TxRx)
   {
     case 'a':
-    K1  = K1+0.1;
+    K1  = K1+1;
     break;
 
     case 's':
-    K1 = K1-0.1;
+    K1 = K1-1;
     break;
 
     case 'd':
@@ -117,47 +124,24 @@ void Tune()
     case 'f':
     K2 = K2-0.1;
     break;
-
     case 'g':
-    K3 = K3+0.001;
+    K3 = K3+0.0005;
     break;
 
     case 'h':
-    K3 = K3-0.001;
+    K3 = K3-0.0005;
     break;
+
+    case '0':
+      digitalWrite(13, LOW);
+      break;
+    case '1':
+      digitalWrite(13, HIGH);
+      break;
+    default:
+      Serial.println("Unknown command!");
+      break;
 
   }
   TxRx = '0';
-}
-
-void PrintData()
-{
-  Serial.print(theta1_X);
-  Serial.print("  ");
-  Serial.print(theta1_Y);
-  Serial.print("  ");
-  Serial.print(m1);
-  Serial.print("  ");
-  Serial.print(m2);
-  Serial.print("  ");
-  Serial.println(m3);
-}
-
-void process_commands() {
-  while (hc06.available() > 0) {
-    char c = hc06.read();
-    Serial.print(c);
-
-    switch (c) {
-      case '0':
-        digitalWrite(13, LOW);
-        break;
-      case '1':
-        digitalWrite(13, HIGH);
-        break;
-      default:
-        Serial.println("Unknown command!");
-        break;
-    }
-  }
 }

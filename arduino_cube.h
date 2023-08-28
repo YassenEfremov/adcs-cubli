@@ -35,9 +35,9 @@
 
 // Control system variables
 //##############################################################################
-float K1=  30.8;  // gains theta1 //30/
+float K1=  15;  // gains theta1 //30/
 float K2=  1;        // theta1dot //6
-float K3=  0.02;      // theta2   //0.15//0.05
+float K3=  0.000001;      // theta2   //0.15//0.05
 
 //madgwick filter and sensor variables
 //############################################################################
@@ -56,21 +56,22 @@ float GyX_offset_sum, GyY_offset_sum, GyZ_offset_sum;
 //############################################################################
 float theta1_X = 0;       // system angular position (rad)
 float theta1dot_X= 0;    // system angular velocity
-float theta2dot_X = 0;    // system flywheel angular velocity
 
 float theta1_Y = 0;      
 float theta1dot_Y= 0;    
-float theta2dot_Y = 0;    
 
-float req_torqueX;      // torque required by the control system
-float req_accX;          //that torque represented in acceleration
+float theta2dot_1=0;
+float theta2dot_2=0;
+float theta2dot_3=0;
 
-float req_torqueY;      
-float req_accY;         
+float req_torque1;      // torque required by the control system
+float req_torque2; 
+float req_torque3; 
 
-// motor control
-//############################################################################
-float m1,m2,m3;
+float req_acc1;          //that torque represented in acceleration
+float req_acc2; 
+float req_acc3; 
+
 //general timer readings
 //############################################################################
 long currentT, previousT_1; //timer interrupts
