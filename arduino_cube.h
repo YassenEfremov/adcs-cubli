@@ -1,16 +1,20 @@
 //pins for motors
-#define PWM_1         10
-#define DIR_1         8
+#define PWM_1		3	// new: 3	og: 10
+#define DIR_1		2	// new: 2	og: 8
 
-#define PWM_2         9
-#define DIR_2         7
+#define PWM_2		5	// new: 5	og: 9
+#define DIR_2		4	// new: 4	og: 7
 
-#define PWM_3        5     
-#define DIR_3         4     
+#define PWM_3		6	// new: 6	og: 5
+#define DIR_3		7	// new: 7	og: 4
+
+						// 8 - AltSoftSerial Rx
+						// 9 - AltSoftSerial Tx
+						// 10 - AltSoftSerial Unusable PWM
 
 // other pins
-#define BRAKE         8
-#define BUZZER        12
+#define BRAKE		11
+#define BUZZER		12
 
 //IMU register values
 #define MPU6050 0x68          // MPU6050 address for I2C
@@ -77,4 +81,4 @@ float req_acc3;
 long currentT, previousT_1; //timer interrupts
 
 //tuning paprameters
-char TxRx;
+char TxRx = ' ';

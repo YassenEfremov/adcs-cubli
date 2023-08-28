@@ -101,47 +101,59 @@ void PrintData()
 void process_commands() {
   if(hc06.available()) {
     TxRx = hc06.read();
+    Serial.println(TxRx);
   }
-  if (Serial.available())
-  {
-    TxRx = Serial.read();
-  }
+  // if (Serial.available())
+  // {
+  //   TxRx = Serial.read();
+  // }
 
-  switch(TxRx)
-  {
-    case 'a':
+  switch(TxRx) {
+  case 'a':
     K1  = K1+1;
     break;
 
-    case 's':
+  case 's':
     K1 = K1-1;
     break;
 
-    case 'd':
+  case 'd':
     K2 = K2+0.1;
     break;
 
-    case 'f':
+  case 'f':
     K2 = K2-0.1;
     break;
-    case 'g':
+  case 'g':
     K3 = K3+0.0005;
     break;
 
-    case 'h':
+  case 'h':
     K3 = K3-0.0005;
     break;
 
-    case '0':
-      digitalWrite(13, LOW);
-      break;
-    case '1':
-      digitalWrite(13, HIGH);
-      break;
-    default:
-      Serial.println("Unknown command!");
-      break;
+  case '0':
+    digitalWrite(13, LOW);
+    break;
 
+  case '1':
+    digitalWrite(13, HIGH);
+    break;
+
+  default:
+    // Serial.println("Unknown command!");
+    break;
   }
-  TxRx = '0';
+  TxRx = ' ';
+}
+
+void send_telemetry() {
+
+  // byte *theta1_X_data = &theta1_X;
+
+  hc06.print("theta1_X: ");
+  hc06.print(theta1_X);
+  hc06.print("    theta1_Y: ");
+  hc06.print(theta1_Y);
+  hc06.println();
 }

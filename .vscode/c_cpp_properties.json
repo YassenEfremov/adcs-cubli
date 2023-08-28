@@ -20,7 +20,7 @@
                 "/home/yassen/.arduino15/packages/arduino/hardware/avr/1.8.5/variants/eightanaloginputs",
                 "/home/yassen/Arduino/libraries/Madgwick/src",
                 "/home/yassen/.arduino15/packages/arduino/hardware/avr/1.8.5/libraries/Wire/src",
-                "/home/yassen/.arduino15/packages/arduino/hardware/avr/1.8.5/libraries/SoftwareSerial/src",
+                "/home/yassen/Arduino/libraries/AltSoftSerial",
                 "/home/yassen/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/lib/gcc/avr/7.3.0/include",
                 "/home/yassen/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/lib/gcc/avr/7.3.0/include-fixed",
                 "/home/yassen/.arduino15/packages/arduino/tools/avr-gcc/7.3.0-atmel3.6.1-arduino7/avr/include"
