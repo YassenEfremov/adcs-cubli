@@ -1,12 +1,13 @@
-#include <MadgwickAHRS.h>
 #include "arduino_cube.h"
-#include <stdint.h>
+
 #include <Wire.h>
 #include <AltSoftSerial.h>  // full-duplex! (SoftwareSerial.h is half-duplex!)
+#include <stdint.h>
 //dirk Slabber
 //24/08/2023
 
 AltSoftSerial hc06;
+
 
 void setup() {
   Serial.begin(9600);
@@ -55,6 +56,7 @@ void setup() {
 
   previousT_1 = millis();
 }
+
 
 void loop() {
 

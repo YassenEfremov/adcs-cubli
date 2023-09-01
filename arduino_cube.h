@@ -1,3 +1,6 @@
+#include <MadgwickAHRS.h>
+
+
 //pins for motors
 #define PWM_1		3	// new: 3	og: 10
 #define DIR_1		2	// new: 2	og: 8
