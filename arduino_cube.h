@@ -17,7 +17,7 @@
 
 // other pins
 #define BRAKE		11
-#define BUZZER		12
+#define BUZZER		13
 
 //IMU register values
 #define MPU6050 0x68          // MPU6050 address for I2C
@@ -28,7 +28,7 @@
 #define gyroSens 0            // 0 = 250rad/s, 1 = 500rad/s, 2 1000rad/s, 3 = 2000rad/s
 
 //control parameters
-#define loop_time  10  // the sample rate in ms
+#define loop_time  1  // the sample rate in ms
 
 //madgwick filter properties
 #define mgwk_freq 1000         //sampling frequency of the filter
@@ -42,9 +42,9 @@
 
 // Control system variables
 //##############################################################################
-float K1=  15;  // gains theta1 //30/
-float K2=  1;        // theta1dot //6
-float K3=  0.000001;      // theta2   //0.15//0.05
+float K1 = 40;  // gains theta1 //30/
+float K2 = 2;        // theta1dot //6
+float K3 = 0.00001;      // theta2   //0.15//0.05
 
 //madgwick filter and sensor variables
 //############################################################################

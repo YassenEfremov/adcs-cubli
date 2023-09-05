@@ -7,7 +7,7 @@ void writeTo(byte device, byte address, byte value)
   Wire.endTransmission(true);
 }
 
-void Beep()
+void beep()
 {
   digitalWrite(BUZZER, 1);
   delay(100);
@@ -83,8 +83,8 @@ void Set_pwm() { // assume a triangle with the motors perfectly horizontal the s
 }
 void Motor_set_speed()
 {
-  Motor_control(1,theta2dot_1);
-  Motor_control(2,theta2dot_2);
+  // Motor_control(1,theta2dot_1);
+  // Motor_control(2,theta2dot_2);
   Motor_control(3,-theta2dot_3);
 }
 
@@ -110,26 +110,26 @@ void process_commands() {
 
   switch(TxRx) {
   case 'a':
-    K1  = K1+1;
+    K1 += 1;
     break;
 
   case 's':
-    K1 = K1-1;
+    K1 -= 1;
     break;
 
   case 'd':
-    K2 = K2+0.1;
+    K2 += 0.1;
     break;
 
   case 'f':
-    K2 = K2-0.1;
+    K2 -= 0.1;
     break;
   case 'g':
-    K3 = K3+0.0005;
+    K3 += 0.001;
     break;
 
   case 'h':
-    K3 = K3-0.0005;
+    K3 -= 0.001;
     break;
 
   case '0':
@@ -140,11 +140,19 @@ void process_commands() {
     digitalWrite(13, HIGH);
     break;
 
+  case 'b':
+    // don't do anything, just beep
+    break;
+
   default:
     // Serial.println("Unknown command!");
-    break;
+    return;
   }
   TxRx = ' ';
+
+  Serial.print("command: ");
+  Serial.println(TxRx);
+  beep();
 }
 
 void send_telemetry() {

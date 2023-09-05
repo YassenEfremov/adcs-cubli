@@ -31,17 +31,17 @@ void setup() {
   filter.begin(mgwk_freq);
 
   //Ensure the motor starts at 0 rpm
-  delay(100);
+  // delay(100);
   Motor_control(1, 0);
   Motor_control(2, 0);
   Motor_control(3, 0);
-  digitalWrite(BRAKE, HIGH);
   //motor_demo();
-  //Beeps to warn user that calibration is about to start
-  delay(5000);
-  Beep();
-  delay(5000);
-  Beep();
+  //beeps to warn user that calibration is about to start
+  // delay(5000);
+  // beep();
+  // delay(5000);
+  // beep();
+  // delay(100);
 
   //initialise the IMU and complete the offset calibration
   MPU6050_init();
@@ -52,7 +52,7 @@ void setup() {
   millis_per_filter_reading = 1000/mgwk_freq;
   
   //beep a third time to announce start
-  Beep();
+  beep();
 
   previousT_1 = millis();
 }
@@ -72,8 +72,8 @@ void loop() {
     Set_pwm();
     Motor_set_speed();
     process_commands();
-    send_telemetry();
-    PrintData();
+    // send_telemetry();
+    // PrintData();
     previousT_1 = currentT;
   }
 }
